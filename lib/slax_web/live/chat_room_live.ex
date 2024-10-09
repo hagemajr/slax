@@ -78,7 +78,7 @@ defmodule SlaxWeb.ChatRoomLive do
     {:noreply, assign(socket, hide_topic?: false, page_title: "#" <> room.name, room: room)}
   end
 
-  def mount(params, _session, socket) do
+  def mount(_params, _session, socket) do
     rooms = Chat.list_rooms()
 
     {:ok, assign(socket, hide_topic?: false, rooms: rooms)}
