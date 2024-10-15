@@ -2,7 +2,7 @@ defmodule SlaxWeb.ChatRoomLive do
   use SlaxWeb, :live_view
 
   alias Slax.Chat
-  alias Slax.Chat.Room
+  alias Slax.Chat.{Message, Room}
 
   def render(assigns) do
     ~H"""
@@ -45,6 +45,42 @@ defmodule SlaxWeb.ChatRoomLive do
               <% end %>
             </div>
           </div>
+          <ul class="relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
+          <%= if @current_user do %>
+            <li class="text-[0.8125rem] leading-6 text-zinc-900">
+              <%= @current_user.email %>
+            </li>
+            <li>
+              <.link
+                href={~p"/users/log_out"}
+                method="delete"
+                class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-zinc-700"
+              >
+                Log out
+              </.link>
+            </li>
+          <% else %>
+            <li>
+              <.link
+                href={~p"/users/register"}
+                class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-zinc-700"
+              >
+                Register
+              </.link>
+            </li>
+            <li>
+              <.link
+                href={~p"/users/log_in"}
+                class="text-[0.8125rem] leading-6 text-zinc-900 font-semibold hover:text-zinc-700"
+              >
+                Log in
+              </.link>
+            </li>
+          <% end %>
+        </ul>
+        </div>
+        <div class="flex flex-col flex-grow overflow-auto">
+          <.message :for={message <- @messages} message={message} />
         </div>
       </div>
     """
@@ -69,13 +105,33 @@ defmodule SlaxWeb.ChatRoomLive do
     """
   end
 
+  attr :message, Message, required: true
+  defp message(assigns) do
+    ~H"""
+    <div class="relative flex px-4 py-3">
+      <div class="h-10 w-10 rounded flex-shrink-0 bg-slate-300"></div>
+      <div class="ml-2">
+        <div class="-mt-1">
+          <.link class="text-sm font-semibold hover:underline">
+            <span>User</span>
+          </.link>
+          <p class="text-sm"><%= @message.body %></p>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   def handle_params(params, _session, socket) do
     room = case Map.fetch(params, "id") do
       {:ok, id} -> Chat.get_room!(id)
 
       :error -> Chat.get_first_room!()
     end
-    {:noreply, assign(socket, hide_topic?: false, page_title: "#" <> room.name, room: room)}
+
+    messages = Chat.list_messages_in_roon(room)
+
+    {:noreply, assign(socket, hide_topic?: false, page_title: "#" <> room.name, room: room, messages: messages)}
   end
 
   def mount(_params, _session, socket) do
