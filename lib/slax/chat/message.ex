@@ -2,10 +2,13 @@ defmodule Slax.Chat.Message do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Slax.Accounts.User
+  alias Slax.Chat.Room
+
   schema "messages" do
     field :body, :string
-    field :user_id, :id
-    field :room_id, :id
+    belongs_to :room, Room
+    belongs_to :user, User #to specify FK, foreign_key: :user_id
 
     timestamps(type: :utc_datetime)
   end
