@@ -39,3 +39,7 @@ npm-debug.log
 *.db
 *.db-*
 
+.idea
+.vscode
+mix.lock
+.idea

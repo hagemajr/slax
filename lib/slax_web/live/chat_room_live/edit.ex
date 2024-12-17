@@ -3,29 +3,29 @@ defmodule SlaxWeb.ChatRoomLive.Edit do
 
   alias Slax.Chat
 
-  def render(assigns) do
-    ~H"""
-      <div class="mx-auto mt-12 w-96">
-        <.header>
-          <%= @page_title %>
-          <:actions>
-            <.link class="text-xs font-normal text-blue-600 hover:text-blue-700"
-              navigate={~p"/rooms/#{@room}"}>
-              Back
-            </.link>
-          </:actions>
-        </.header>
-
-        <.simple_form for={@form} id="room-form" phx-change="validate-room" phx-submit="save-room">
-        <.input field={@form[:name]} type="text" label="Name" phx-debounce={500} />
-        <.input field={@form[:topic]} type="text" label="Topic" phx-debounce={500} />
-        <:actions>
-          <.button phx-disable-with="Saving..." class="w-full">Save</.button>
-        </:actions>
-      </.simple_form>
-      </div>
-    """
-  end
+#  def render(assigns) do
+#    ~H"""
+#      <div class="mx-auto mt-12 w-96">
+#        <.header>
+#          <%= @page_title %>
+#          <:actions>
+#            <.link class="text-xs font-normal text-blue-600 hover:text-blue-700"
+#              navigate={~p"/rooms/#{@room}"}>
+#              Back
+#            </.link>
+#          </:actions>
+#        </.header>
+#
+#        <.simple_form for={@form} id="room-form" phx-change="validate-room" phx-submit="save-room">
+#        <.input field={@form[:name]} type="text" label="Name" phx-debounce={500} />
+#        <.input field={@form[:topic]} type="text" label="Topic" phx-debounce={500} />
+#        <:actions>
+#          <.button phx-disable-with="Saving..." class="w-full">Save</.button>
+#        </:actions>
+#      </.simple_form>
+#      </div>
+#    """
+#  end
 
   def mount(%{"id" => id}, _session, socket) do
     room = Chat.get_room!(id)
