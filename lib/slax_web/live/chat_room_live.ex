@@ -145,6 +145,9 @@ defmodule SlaxWeb.ChatRoomLive do
       <button
         :if={@current_user.id == @message.user_id}
         class="absolute top-4 right-4 text-red-500 hover:text-red-800 cursor-pointer"
+        data-confirm="Are you sure?"
+        phx-click="delete-message"
+        phx-value-id={@message.id}
       >
         <.icon name="hero-trash" class="h-4 w-4" />
       </button>
@@ -211,6 +214,12 @@ defmodule SlaxWeb.ChatRoomLive do
     changeset = Chat.change_message(%Message{}, message_params)
 
     {:noreply, assign_message_form(socket, changeset)}
+  end
+
+  def handle_event("delete-message", %{"id" => id}, socket) do
+    {:ok, message} = Chat.delete_message_by_id(id, socket.assigns.current_user)
+
+    {:noreply, stream_delete(socket, :messages, message)}
   end
 
   def handle_event("submit-message", %{"message" => message_params}, socket) do
