@@ -11,14 +11,14 @@ defmodule Slax.Application do
       SlaxWeb.Telemetry,
       Slax.Repo,
       {Ecto.Migrator,
-        repos: Application.fetch_env!(:slax, :ecto_repos),
-        skip: skip_migrations?()},
+       repos: Application.fetch_env!(:slax, :ecto_repos), skip: skip_migrations?()},
       {DNSCluster, query: Application.get_env(:slax, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Slax.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: Slax.Finch},
       # Start a worker by calling: Slax.Worker.start_link(arg)
       # {Slax.Worker, arg},
+      SlaxWeb.Presence,
       # Start to serve requests, typically the last entry
       SlaxWeb.Endpoint
     ]
