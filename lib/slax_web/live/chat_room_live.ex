@@ -34,6 +34,7 @@ defmodule SlaxWeb.ChatRoomLive do
             <.user
               :for={user <- @users}
               user={user}
+              typing={Time.diff(OnlineUsers.typing?(@online_users, user.id), Time.utc_now(), :second)}
               online={OnlineUsers.online?(@online_users, user.id)}
             />
           </div>
@@ -115,6 +116,7 @@ defmodule SlaxWeb.ChatRoomLive do
           id="new-message-form"
           for={@new_message_form}
           phx-change="validate-message"
+          phx-value-user_id={@current_user.id}
           phx-submit="submit-message"
           class="flex items-center border-2 border-slate-300 rounded-sm p-1"
         >
@@ -252,6 +254,8 @@ defmodule SlaxWeb.ChatRoomLive do
 
     timezone = get_connect_params(socket)["timezone"]
 
+    OnlineUsers.subscribe()
+
     socket =
       socket
       |> assign(rooms: rooms, timezone: timezone, users: users)
@@ -268,7 +272,11 @@ defmodule SlaxWeb.ChatRoomLive do
     {:noreply, update(socket, :hide_topic?, &(!&1))}
   end
 
-  def handle_event("validate-message", %{"message" => message_params}, socket) do
+  def handle_event(
+        "validate-message",
+        %{"message" => message_params},
+        socket
+      ) do
     changeset = Chat.change_message(%Message{}, message_params)
 
     {:noreply, assign_message_form(socket, changeset)}
@@ -305,5 +313,12 @@ defmodule SlaxWeb.ChatRoomLive do
 
   def handle_info({:message_deleted, message}, socket) do
     {:noreply, stream_delete(socket, :messages, message)}
+  end
+
+  def handle_info(%{event: "presence_diff", payload: diff}, socket) do
+    # IO.inspect(diff)
+    online_users = OnlineUsers.update(socket.assigns.online_users, diff)
+
+    {:noreply, assign(socket, online_users: online_users)}
   end
 end
