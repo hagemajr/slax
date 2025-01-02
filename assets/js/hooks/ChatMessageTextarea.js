@@ -10,11 +10,6 @@ const ChatMessageTextarea = {
         form.dispatchEvent(
           new Event("submit", { bubbles: true, cancelable: true }),
         );
-      } else {
-        this.el.dispatchEvent(
-          new Event("change", { bubbles: true, cancelable: true }),
-        );
-        console.info("Test");
       }
     });
   },

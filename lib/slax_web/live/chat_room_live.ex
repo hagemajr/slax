@@ -34,7 +34,7 @@ defmodule SlaxWeb.ChatRoomLive do
             <.user
               :for={user <- @users}
               user={user}
-              typing={Time.diff(OnlineUsers.typing?(@online_users, user.id), Time.utc_now(), :second)}
+              typing={OnlineUsers.typing?(@online_users, user.id)}
               online={OnlineUsers.online?(@online_users, user.id)}
             />
           </div>
@@ -111,7 +111,12 @@ defmodule SlaxWeb.ChatRoomLive do
           timezone={@timezone}
         />
       </div>
-      <div class="h-12 bg-white px-4 pb-4">
+      <div
+        phx-window-keydown="key_down"
+        phx-window-keyup="key_up"
+        phx-value-user_id={@current_user.id}
+        class="h-12 bg-white px-4 pb-4"
+      >
         <.form
           id="new-message-form"
           for={@new_message_form}
@@ -141,6 +146,7 @@ defmodule SlaxWeb.ChatRoomLive do
 
   attr :user, User, required: true
   attr :online, :boolean, default: false
+  attr :typing, :integer, default: 0
 
   defp user(assigns) do
     ~H"""
@@ -152,7 +158,11 @@ defmodule SlaxWeb.ChatRoomLive do
           <span class="w-2 h-2 rounded-full border-2 border-gray-500"></span>
         <% end %>
       </div>
-      <span class="ml-2 leading-none"><%= username(@user) %></span>
+      <%= if @typing == 1 do %>
+        <span class="ml-2 leading-none"><%= username(@user) <> " is typing...." %></span>
+      <% else %>
+        <span class="ml-2 leading-none"><%= username(@user) %></span>
+      <% end %>
     </.link>
     """
   end
@@ -299,6 +309,16 @@ defmodule SlaxWeb.ChatRoomLive do
           assign_message_form(socket, changeset)
       end
 
+    {:noreply, socket}
+  end
+
+  def handle_event("key_down", %{"user_id" => user_id}, socket) do
+    OnlineUsers.set_typing_status(self(), String.to_integer(user_id), 1)
+    {:noreply, socket}
+  end
+
+  def handle_event("key_up", %{"user_id" => user_id}, socket) do
+    OnlineUsers.set_typing_status(self(), String.to_integer(user_id), 0)
     {:noreply, socket}
   end
 

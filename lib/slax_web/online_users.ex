@@ -4,18 +4,15 @@ defmodule SlaxWeb.OnlineUsers do
   @topic "online_users"
 
   def list() do
-    l =
-      @topic
-      |> Presence.list()
-
-    # IO.inspect(l)
+    @topic
+    |> Presence.list()
   end
 
   def track(pid, user) do
     {:ok, _} =
       Presence.track(pid, @topic, user.id, %{
-        typing: Time.add(Time.utc_now(), -600),
-        count: 0,
+        typing: 0,
+        count: 1,
         phx_ref: nil,
         phx_ref_prev: nil
       })
@@ -24,25 +21,37 @@ defmodule SlaxWeb.OnlineUsers do
   end
 
   def online?(online_users, user_id) do
-    online =
-      Map.get(online_users, Integer.to_string(user_id), %{
-        metas: [
-          %{count: 0, typing: Time.add(Time.utc_now(), -600), phx_ref: nil, phx_ref_prev: nil}
-        ]
-      })
-      |> get_meta_stats()
-      |> elem(0)
+    user_presence =
+      Map.get(online_users, Integer.to_string(user_id), false)
 
-    if online > 0 do
-      true
-    else
-      false
+    # |> IO.inspect()
+
+    case user_presence do
+      false ->
+        false
+
+      %{metas: metas} ->
+        # IO.inspect(metas)
+
+        sum =
+          Enum.map(
+            metas,
+            fn %{count: count} ->
+              count
+            end
+          )
+          |> Enum.sum()
+
+        if sum > 0, do: true, else: false
+
+      _ ->
+        true
     end
   end
 
-  def set_typing_status(pid, user_id) do
+  def set_typing_status(pid, user_id, status) do
     Presence.update(pid, @topic, user_id, %{
-      typing: Time.utc_now(),
+      typing: status,
       count: 1,
       phx_ref: nil,
       phx_ref_prev: nil
@@ -55,16 +64,11 @@ defmodule SlaxWeb.OnlineUsers do
     typing =
       Map.get(online_users, Integer.to_string(user_id), %{
         metas: [
-          %{count: 0, typing: Time.add(Time.utc_now(), -600), phx_ref: nil, phx_ref_prev: nil}
+          %{count: 0, typing: 0, phx_ref: nil, phx_ref_prev: nil}
         ]
       })
       |> get_meta_stats()
       |> elem(1)
-
-    typing
-
-    # IO.inspect(typing)
-    # IO.inspect(Time.utc_now())
 
     typing
   end
@@ -74,8 +78,8 @@ defmodule SlaxWeb.OnlineUsers do
   end
 
   def get_meta_stats(%{metas: metas}) do
-    Enum.reduce(metas, {0, nil, nil, nil}, fn meta,
-                                              {count_acc, typing_acc, ref_acc, ref_prev_acc} ->
+    Enum.reduce(metas, {0, 0, nil, nil}, fn meta,
+                                            {count_acc, typing_acc, ref_acc, ref_prev_acc} ->
       {
         count_acc + meta.count,
         max(meta.typing, typing_acc),
@@ -87,62 +91,47 @@ defmodule SlaxWeb.OnlineUsers do
 
   def update(online_users, %{joins: joins, leaves: leaves}) do
     # IO.inspect(online_users)
+    # IO.inspect(leaves)
 
-    list =
-      online_users
-      |> process_joins(joins)
-      |> process_leaves(leaves)
-
-    # IO.inspect(list)
-    list
+    online_users
+    |> process_updates(joins, &Kernel.+/2)
+    |> process_updates(leaves, &Kernel.-/2)
   end
 
-  defp process_joins(online_users, updates) do
-    # IO.inspect(online_users)
-    # IO.inspect(updates)
+  defp process_updates(online_users, updates, operation) do
     l =
-      Enum.reduce(updates, %{}, fn {key, value}, acc ->
-        # Do something with key and value
-        # Return new accumulator
-        Map.put(acc, key, %{
-          metas: [
+      Enum.reduce(updates, online_users, fn {id, %{metas: metas}}, acc ->
+        Map.update(
+          acc,
+          id,
+          metas,
+          fn x ->
+            # IO.inspect(x)
+            total_count =
+              Enum.map(x, fn {:metas, list} ->
+                Enum.map(list, fn %{count: new_count} -> new_count end) |> Enum.sum()
+              end)
+              |> Enum.sum()
+
+            [%{count: count, typing: typing, phx_ref: phx_ref, phx_ref_prev: phx_ref_prev} | _] =
+              metas
+
             %{
-              count: get_meta_stats(value) |> elem(0),
-              typing: get_meta_stats(value) |> elem(1),
-              phx_ref: get_meta_stats(value) |> elem(2),
-              phx_ref_prev: get_meta_stats(value) |> elem(3)
+              metas: [
+                %{
+                  count: operation.(total_count, 1),
+                  typing: typing,
+                  phx_ref: phx_ref,
+                  phx_ref_prev: phx_ref_prev
+                }
+              ]
             }
-          ]
-        })
+          end
+        )
       end)
 
-    # Enum.each(l, fn {key, value} ->
-    #  IO.inspect(get_meta_stats(value))
-    # end
-    # IO.puts("Update here\n\n\n")
     # IO.inspect(l)
 
-    out =
-      Enum.reduce(online_users, %{}, fn {key, value}, acc ->
-        Map.put(acc, key, %{
-          metas: [
-            %{
-              count: (get_meta_stats(value) |> elem(0)) + 1,
-              typing: Map.get(l, key).metas |> hd() |> Map.get(:typing),
-              phx_ref: get_meta_stats(value) |> elem(2),
-              phx_ref_prev: get_meta_stats(value) |> elem(3)
-            }
-          ]
-        })
-      end)
-
-    # IO.puts("Output here\n\n\n\n")
-    # IO.inspect(out)
-    out
-  end
-
-  defp process_leaves(online_users, updates) do
-    # IO.inspect(updates)
-    online_users
+    l
   end
 end
