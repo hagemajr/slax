@@ -99,39 +99,41 @@ defmodule SlaxWeb.OnlineUsers do
   end
 
   defp process_updates(online_users, updates, operation) do
-    l =
-      Enum.reduce(updates, online_users, fn {id, %{metas: metas}}, acc ->
-        Map.update(
-          acc,
-          id,
-          metas,
-          fn x ->
-            # IO.inspect(x)
-            total_count =
-              Enum.map(x, fn {:metas, list} ->
-                Enum.map(list, fn %{count: new_count} -> new_count end) |> Enum.sum()
-              end)
-              |> Enum.sum()
+    Enum.reduce(updates, online_users, fn {id,
+                                           %{
+                                             metas:
+                                               [
+                                                 %{
+                                                   count: count,
+                                                   typing: typing,
+                                                   phx_ref: phx_ref,
+                                                   phx_ref_prev: phx_ref_prev
+                                                 }
+                                                 | _
+                                               ] = metas
+                                           }},
+                                          acc ->
+      case Map.fetch(acc, id) do
+        {:ok, existing_metas} ->
+          total_count =
+            Enum.reduce(existing_metas, 0, fn {:metas, list}, sum ->
+              sum + Enum.sum(Enum.map(list, & &1.count))
+            end)
 
-            [%{count: count, typing: typing, phx_ref: phx_ref, phx_ref_prev: phx_ref_prev} | _] =
-              metas
+          Map.put(acc, id, %{
+            metas: [
+              %{
+                count: operation.(total_count, 1),
+                typing: typing,
+                phx_ref: phx_ref,
+                phx_ref_prev: phx_ref_prev
+              }
+            ]
+          })
 
-            %{
-              metas: [
-                %{
-                  count: operation.(total_count, 1),
-                  typing: typing,
-                  phx_ref: phx_ref,
-                  phx_ref_prev: phx_ref_prev
-                }
-              ]
-            }
-          end
-        )
-      end)
-
-    # IO.inspect(l)
-
-    l
+        :error ->
+          Map.put(acc, id, %{metas: metas})
+      end
+    end)
   end
 end
