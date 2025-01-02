@@ -104,7 +104,7 @@ defmodule SlaxWeb.OnlineUsers do
                                              metas:
                                                [
                                                  %{
-                                                   count: count,
+                                                   count: _count,
                                                    typing: typing,
                                                    phx_ref: phx_ref,
                                                    phx_ref_prev: phx_ref_prev
