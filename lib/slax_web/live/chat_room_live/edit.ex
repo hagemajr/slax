@@ -3,39 +3,47 @@ defmodule SlaxWeb.ChatRoomLive.Edit do
 
   alias Slax.Chat
 
-#  def render(assigns) do
-#    ~H"""
-#      <div class="mx-auto mt-12 w-96">
-#        <.header>
-#          <%= @page_title %>
-#          <:actions>
-#            <.link class="text-xs font-normal text-blue-600 hover:text-blue-700"
-#              navigate={~p"/rooms/#{@room}"}>
-#              Back
-#            </.link>
-#          </:actions>
-#        </.header>
-#
-#        <.simple_form for={@form} id="room-form" phx-change="validate-room" phx-submit="save-room">
-#        <.input field={@form[:name]} type="text" label="Name" phx-debounce={500} />
-#        <.input field={@form[:topic]} type="text" label="Topic" phx-debounce={500} />
-#        <:actions>
-#          <.button phx-disable-with="Saving..." class="w-full">Save</.button>
-#        </:actions>
-#      </.simple_form>
-#      </div>
-#    """
-#  end
+  #  def render(assigns) do
+  #    ~H"""
+  #      <div class="mx-auto mt-12 w-96">
+  #        <.header>
+  #          <%= @page_title %>
+  #          <:actions>
+  #            <.link class="text-xs font-normal text-blue-600 hover:text-blue-700"
+  #              navigate={~p"/rooms/#{@room}"}>
+  #              Back
+  #            </.link>
+  #          </:actions>
+  #        </.header>
+  #
+  #        <.simple_form for={@form} id="room-form" phx-change="validate-room" phx-submit="save-room">
+  #        <.input field={@form[:name]} type="text" label="Name" phx-debounce={500} />
+  #        <.input field={@form[:topic]} type="text" label="Topic" phx-debounce={500} />
+  #        <:actions>
+  #          <.button phx-disable-with="Saving..." class="w-full">Save</.button>
+  #        </:actions>
+  #      </.simple_form>
+  #      </div>
+  #    """
+  #  end
 
   def mount(%{"id" => id}, _session, socket) do
     room = Chat.get_room!(id)
 
-    changeset = Chat.change_room(room)
-
     socket =
+      socket
+
+    if Chat.joined?(room, socket.assigns.current_user) do
+      changeset = Chat.change_room(room)
+
       socket
       |> assign(page_title: "Edit chat room", room: room)
       |> assign_form(changeset)
+    else
+      socket
+      |> put_flash(:error, "Permission denied")
+      |> push_navigate(to: ~p"/")
+    end
 
     {:ok, socket}
   end
@@ -57,9 +65,9 @@ defmodule SlaxWeb.ChatRoomLive.Edit do
     case Chat.update_room(socket.assigns.room, room_params) do
       {:ok, room} ->
         {:noreply,
-          socket
-          |> put_flash(:info, "Room updated successfully")
-          |> push_navigate(to: ~p"/rooms/#{room}")}
+         socket
+         |> put_flash(:info, "Room updated successfully")
+         |> push_navigate(to: ~p"/rooms/#{room}")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}

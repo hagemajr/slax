@@ -17,8 +17,31 @@ defmodule Slax.Chat do
 
   defp topic(room_id), do: "chat_room:#{room_id}"
 
-  def join_rooom!(room, user) do
+  def join_room!(room, user) do
     Repo.insert!(%RoomMembership{room: room, user: user})
+  end
+
+  def toggle_room_membership(room, user) do
+    case Repo.get_by(RoomMembership, room_id: room.id, user_id: user.id) do
+      %RoomMembership{} = membership ->
+        Repo.delete(membership)
+        {room, false}
+
+      nil ->
+        join_room!(room, user)
+        {room, true}
+    end
+  end
+
+  def list_rooms_with_joined(%User{} = user) do
+    query =
+      from r in Room,
+        left_join: m in RoomMembership,
+        on: r.id == m.room_id and m.user_id == ^user.id,
+        select: {r, not is_nil(m.id)},
+        order_by: [asc: :name]
+
+    Repo.all(query)
   end
 
   def get_first_room! do
@@ -31,6 +54,19 @@ defmodule Slax.Chat do
 
   def list_rooms do
     Repo.all(from r in Room, order_by: [asc: :name])
+  end
+
+  def list_joined_rooms(%User{} = user) do
+    user
+    |> Repo.preload(:rooms)
+    |> Map.fetch!(:rooms)
+    |> Enum.sort_by(& &1.name)
+  end
+
+  def joined?(%Room{} = room, %User{} = user) do
+    Repo.exists?(
+      from rm in RoomMembership, where: rm.room_id == ^room.id and rm.user_id == ^user.id
+    )
   end
 
   def create_room(attrs) do
